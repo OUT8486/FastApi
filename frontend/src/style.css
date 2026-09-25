@@ -1,0 +1,17 @@
+:root{--brand:#176b87;--brand-dark:#0f4c63;--page-bg:#f3f7f8;--text-main:#18343d;--text-muted:#70868e;--line:#e3ecef}
+*{box-sizing:border-box}
+html,body,#app{min-width:320px;min-height:100%;margin:0}
+body{color:var(--text-main);background:var(--page-bg);font-family:Inter,'PingFang SC','Microsoft YaHei',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.el-card{border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 32px rgba(24,72,86,.08)}
+.el-button{border-radius:9px;font-weight:600}
+.el-button--primary{--el-button-bg-color:var(--brand);--el-button-border-color:var(--brand);--el-button-hover-bg-color:var(--brand-dark);--el-button-hover-border-color:var(--brand-dark)}
+.el-input__wrapper,.el-select__wrapper{border-radius:9px}
+.el-table{--el-table-header-bg-color:#f1f7f8;--el-table-row-hover-bg-color:#f4fbfb;--el-table-border-color:var(--line);border-radius:12px;overflow:hidden}
+.page-shell{width:100%;max-width:1440px;margin:0 auto;padding:26px}
+.page-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}
+.page-heading h1{margin:0 0 6px;font-size:24px}
+.page-heading p{margin:0;color:var(--text-muted);font-size:14px}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:18px}
+.toolbar .el-input{width:280px}
+.pagination-bar{display:flex;justify-content:flex-end;margin-top:18px}
+@media(max-width:760px){.page-shell{padding:16px}.page-heading{display:block}.toolbar .el-input{width:100%}}
