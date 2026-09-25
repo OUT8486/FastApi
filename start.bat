@@ -27,20 +27,23 @@ exit /b 0
 :backend
 echo === 后端启动 ^(FastAPI^) ===
 
-if not exist ".env" (
-    if exist ".env.example" (
-        copy /y ".env.example" ".env" >nul
-        echo 已根据 .env.example 生成 .env，请确认数据库账号密码和 JWT_SECRET。
-    ) else (
-        echo 缺少 .env 文件，请先配置数据库连接信息。
-        exit /b 1
-    )
+if exist ".env" goto env_ready
+if not exist ".env.example" (
+    echo 缺少 .env 文件，请先配置数据库连接信息。
+    exit /b 1
 )
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'.ToCharArray(); $secret=-join (1..48 ^| ForEach-Object { $chars[(Get-Random -Maximum $chars.Length)] }); (Get-Content -Raw '.env.example') -replace 'JWT_SECRET=.*', ('JWT_SECRET=' + $secret) ^| Set-Content -Encoding ascii '.env'"
+if not exist ".env" (
+    echo 生成 .env 失败，请手动复制 .env.example 为 .env 并填写 JWT_SECRET。
+    exit /b 1
+)
+echo 已根据 .env.example 生成 .env，并写入随机 JWT_SECRET，请确认数据库账号密码。
+:env_ready
 
 set "PYTHON=.venv\Scripts\python.exe"
 if not exist "%PYTHON%" set "PYTHON=python"
 
-"%PYTHON%" -c "import fastapi, uvicorn, pymysql, bcrypt" >nul 2>&1
+"%PYTHON%" -c "import fastapi, uvicorn, pymysql, bcrypt, dotenv" >nul 2>&1
 if errorlevel 1 (
     echo 正在安装后端依赖...
     "%PYTHON%" -m pip install -r requirements.txt
