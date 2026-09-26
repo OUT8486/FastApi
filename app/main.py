@@ -1,4 +1,4 @@
-"""FastAPI application assembly."""
+"""FastAPI 应用装配（相当于 Spring Boot 的启动类）。"""
 
 from __future__ import annotations
 
@@ -8,13 +8,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .config import settings
-from .database import fetch_one
-from .routers.auth import router as auth_router
-from .routers.auth import users_router
-from .routers.dashboard import router as dashboard_router
-from .routers.resources import ALL_ROUTERS
-from .security import success
+from .controllers.auth import router as auth_router
+from .controllers.auth import users_router
+from .controllers.dashboard import router as dashboard_router
+from .controllers.resources import ALL_ROUTERS
+from .core.config import settings
+from .core.exceptions import BusinessException
+from .core.response import success
+from .db import fetch_one
 
 app = FastAPI(
     title=settings.app_name,
@@ -56,6 +57,16 @@ async def database_exception_handler(
     return JSONResponse(
         status_code=500,
         content={"code": 500, "message": "数据库操作失败", "data": None},
+    )
+
+
+@app.exception_handler(BusinessException)
+async def business_exception_handler(
+    _request: Request, exc: BusinessException
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"code": exc.status_code, "message": exc.message, "data": None},
     )
 
 

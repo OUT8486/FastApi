@@ -1,4 +1,4 @@
-"""Password, token, and response helpers."""
+"""密码与访问令牌工具（纯计算，不依赖数据库）。"""
 
 from __future__ import annotations
 
@@ -6,25 +6,15 @@ import base64
 import hashlib
 import hmac
 import json
-import threading
 import time
 import uuid
-from typing import Annotated, Any
+from typing import Any
 
 import bcrypt
-from fastapi import Depends, Header, HTTPException
 
 from .config import settings
-from .database import fetch_one, transaction
-
-
-def success(data: Any = None, message: str = "操作成功") -> dict[str, Any]:
-    return {"code": 200, "message": message, "data": data}
-
 
 PASSWORD_PREFIX = "$bcrypt-sha256$"
-_TOKEN_REVOCATION_READY = False
-_TOKEN_REVOCATION_LOCK = threading.Lock()
 
 
 def verify_password(password: str, password_hash: str) -> bool:
@@ -48,51 +38,6 @@ def hash_password(password: str) -> str:
     digest = hashlib.sha256(password.encode("utf-8")).digest()
     hashed = bcrypt.hashpw(digest, bcrypt.gensalt(rounds=10)).decode("utf-8")
     return f"{PASSWORD_PREFIX}{hashed}"
-
-
-def _ensure_token_revocation_table() -> None:
-    global _TOKEN_REVOCATION_READY
-    if _TOKEN_REVOCATION_READY:
-        return
-    with _TOKEN_REVOCATION_LOCK:
-        if _TOKEN_REVOCATION_READY:
-            return
-        with transaction() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS token_revocation (
-                        jti varchar(32) NOT NULL,
-                        expires_at bigint NOT NULL,
-                        PRIMARY KEY (jti),
-                        KEY idx_token_revocation_expires_at (expires_at)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-                    """
-                )
-        _TOKEN_REVOCATION_READY = True
-
-
-def revoke_token(jti: str, expires_at: int) -> None:
-    _ensure_token_revocation_table()
-    now = int(time.time())
-    with transaction() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "DELETE FROM token_revocation WHERE expires_at < %s", (now,)
-            )
-            cursor.execute(
-                "INSERT IGNORE INTO token_revocation (jti, expires_at) VALUES (%s, %s)",
-                (jti, expires_at),
-            )
-
-
-def is_token_revoked(jti: str) -> bool:
-    _ensure_token_revocation_table()
-    row = fetch_one(
-        "SELECT jti FROM token_revocation WHERE jti = %s AND expires_at >= %s",
-        (jti, int(time.time())),
-    )
-    return row is not None
 
 
 def _b64url_encode(value: bytes) -> str:
@@ -146,28 +91,3 @@ def decode_access_token(token: str) -> dict[str, Any]:
         return payload
     except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
         raise ValueError("令牌无效") from exc
-
-
-def get_current_user(
-    authorization: Annotated[str | None, Header()] = None,
-) -> dict[str, Any]:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="未登录或缺少令牌")
-    token = authorization[7:].strip()
-    try:
-        payload = decode_access_token(token)
-    except ValueError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    if not payload.get("sub") or not payload.get("jti"):
-        raise HTTPException(status_code=401, detail="令牌无效")
-    if is_token_revoked(str(payload["jti"])):
-        raise HTTPException(status_code=401, detail="令牌已注销")
-    return payload
-
-
-def require_admin(
-    user: Annotated[dict[str, Any], Depends(get_current_user)],
-) -> dict[str, Any]:
-    if user.get("role") not in {"管理员", "admin"}:
-        raise HTTPException(status_code=403, detail="无权限执行此操作")
-    return user

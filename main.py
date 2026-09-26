@@ -1,6 +1,6 @@
 # Development entry point for the pharmacy API.
 
-from app.config import settings
+from app.core.config import settings
 if __name__ == "__main__":
     import uvicorn
 

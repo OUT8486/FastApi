@@ -21,13 +21,34 @@
 
 ```text
 FastApi/
-├─ app/                 FastAPI 应用、配置、数据库、认证与路由
+├─ app/
+│  ├─ main.py           FastAPI 应用装配（相当于启动类）
+│  ├─ deps.py           依赖注入与认证依赖
+│  ├─ core/             配置、密码/JWT、统一响应、业务异常
+│  ├─ db/               数据库连接与事务
+│  ├─ models/           数据表实体与资源元数据
+│  ├─ schemas/          请求 DTO（Pydantic 模型）
+│  ├─ dao/              数据访问层（Repository）
+│  ├─ services/         业务逻辑层（Service）
+│  └─ controllers/      HTTP 控制层（Controller）
 ├─ frontend/            新的 Vue 3 前端
 ├─ main.py              后端开发入口
 ├─ requirements.txt     后端依赖
 ├─ .env.example         环境变量模板
 └─ README.md
 ```
+
+## 后端分层
+
+后端参照 Spring Boot 的分层方式组织，调用方向固定为
+`controller → service → dao → db`，各层职责单一：
+
+- `controllers/` 只处理 HTTP 入参、鉴权依赖与统一响应封装
+- `services/` 承载业务规则（必填校验、数值校验、编号生成、异常翻译）
+- `dao/` 负责参数化 SQL 与事务，向上返回业务实体，不感知 HTTP
+- `db/` 提供连接、事务与查询工具；`core/` 提供配置、加密、响应与异常
+
+接口路径与响应格式保持不变（`{"code": ..., "message": ..., "data": ...}`）。
 
 
 ## 后端启动
@@ -73,4 +94,3 @@ npm run dev
 cd frontend
 npm run build
 ```
-

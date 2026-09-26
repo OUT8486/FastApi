@@ -8,7 +8,7 @@ from typing import Any, Iterator, Sequence
 import pymysql
 from pymysql.cursors import DictCursor
 
-from .config import settings
+from ..core.config import settings
 
 
 def get_connection() -> pymysql.connections.Connection:
